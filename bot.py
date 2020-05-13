@@ -1,5 +1,7 @@
 import discord
+from discord.ext import tasks, commands
 from datetime import datetime
+import time
 import calendar
 import json
 import requests
@@ -23,29 +25,43 @@ worksheet = sheet.worksheet(month)
 
 #GET CURRENT DAY + 1
 day = int(datetime.today().strftime('%d')) + 1
+print(day)
 #GET ROW BY DAY
 midday_col = 2
 midnight_col = 3
-#worksheet.update_cell(10, midday_row, 'test')
 #------------------
-#now = datetime.now().strftime('%H')
 #-------
-#loop(seconds=2, minutes=0, hours=0, count=None, reconnect=True)
-#if now == '12':
-#if message.content.startswith('!dayval'):
-#    response = requests.post(url)
-#    response.raise_for_status()
-#    results = response.json()
-#    worksheet.update_cell(day, midday_col, str(results['alliance'][0]['value']))
-#if now == '21':
-#    print('k')
-#if now == '00':
-#if message.content.startswith('!nightval'):
-#    response = requests.post(url)
-#    response.raise_for_status()
-#    results = response.json()
-#    worksheet.update_cell(day, midnight_col, str(results['alliance'][0]['value']))
+from discord.ext import tasks
 
+@tasks.loop(minutes=0.0, hours=3.0)
+async def slow_count():
+    now = datetime.now().strftime('%H')
+    response = requests.post(url)
+    response.raise_for_status()
+    results = response.json()
+
+    if now == '12':
+        worksheet.update_cell(day, midday_col, str(results['alliance'][0]['value']))
+        print("12 edit")
+        #--
+        all_worksheet = sheet.worksheet("MemberStats")
+        n = 0
+        cell = day + 61
+        for member in results['members']:
+            name = results['members'][n]['company']
+            unix_join = int(results['members'][n]['joined'])
+            join = datetime.utcfromtimestamp(unix_join).strftime('%d/%m/%Y')
+            flights = results['members'][n]['flights']
+            cont = results['members'][n]['contributed'] / 1000
+            all_worksheet.update('A' + str(cell) + ':D' + str(cell), [[name, join, flights, cont]])
+            cell = cell + 1
+            n = n + 1
+    elif now == '00':
+        worksheet.update_cell(day, midnight_col, str(results['alliance'][0]['value']))
+        print("00 edit")
+
+    print("loop restarting")
+slow_count.start()
 
 @client.event
 async def on_ready():
@@ -59,17 +75,17 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    if message.content.startswith('!dayval'):
-        response = requests.post(url)
-        response.raise_for_status()
-        results = response.json()
-        worksheet.update_cell(day, midday_col, str(results['alliance'][0]['value']))
+    #if message.content.startswith('!dayval'):
+    #    response = requests.post(url)
+    #    response.raise_for_status()
+    #    results = response.json()
+    #    worksheet.update_cell(day, midday_col, str(results['alliance'][0]['value']))
 
-    if message.content.startswith('!nightval'):
-        response = requests.post(url)
-        response.raise_for_status()
-        results = response.json()
-        worksheet.update_cell(day, midnight_col, str(results['alliance'][0]['value']))
+    #if message.content.startswith('!nightval'):
+    #    response = requests.post(url)
+    #    response.raise_for_status()
+    #    results = response.json()
+    #    worksheet.update_cell(day, midnight_col, str(results['alliance'][0]['value']))
 
     if message.content.startswith('!alliance'):
         response = requests.post(url)
@@ -107,12 +123,19 @@ async def on_message(message):
         for member in results['members']:
             try:
                 if member['company'] == airname:
-                    cont = member['contributed'] / 1000
+                    today = int(time.time())
+                    cont = member['contributed']
+                    join = int(member['joined'])
+                    #unix time things..
+                    unix_diff = today - join
+                    diff = round(unix_diff / 86400)
+                    #---
+                    avg = cont / diff
                     airname = airname.replace('!stats ', '')
                     embed = discord.Embed(title=airname + "  |  Alliance Stats", color=0x00ffff)
                     embed.add_field(name="Flights", value=str(member['flights']), inline=False)
-                    embed.add_field(name="Contribution", value='$' + str(cont), inline=False)
-                    embed.add_field(name="Share Value", value='$' + str(member['shareValue']), inline=False)
+                    embed.add_field(name="Contribution", value='$' + str(cont / 1000), inline=False)
+                    embed.add_field(name="Average Contribution p/day", value='$' + str(round(avg, 3)), inline=False)
                     embed.set_footer(text="By: TOYOTA - AIR")
                     await message.channel.send(embed=embed)
             except:
