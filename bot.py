@@ -6,60 +6,55 @@ import calendar
 import json
 import requests
 from secrets import *
-#Google API
+# Google API
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
-gc = gspread.authorize(creds)
-#----------
 
 client = discord.Client()
 
-sheet = gc.open("AllianceValue")
-#GET CURRENT MONTH
-month_n = datetime.today().strftime('%m')
-month = calendar.month_name[int(month_n)]
-#GET WORKSHEET BASED ON MONTH
-worksheet = sheet.worksheet(month)
 
-#GET CURRENT DAY + 1
-day = int(datetime.today().strftime('%d')) + 1
-print(day)
-#GET ROW BY DAY
-midday_col = 2
-midnight_col = 3
-#------------------
-#-------
-from discord.ext import tasks
-
-@tasks.loop(minutes=0.0, hours=3.0)
+@tasks.loop(seconds=0.0, minutes=0.0, hours=1.0)
 async def slow_count():
+
+    # USE API'S AND USE CREDS
+    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+    creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
+    gc = gspread.authorize(creds)
+
+# ALLIANCE VALUE CALLS
+    # OPEN THIS FILE - ALLIANCE VALUE
+    sheet = gc.open("AllianceValue")
+    # GET CURRENT MONTH
+    month_n = datetime.today().strftime('%m')
+    month = calendar.month_name[int(month_n)]
+    # GET WORKSHEET BASED ON MONTH - ALLIANCE VALUE
+    worksheet = sheet.worksheet(month)
+    # GET CURRENT DAY + 1 - ALLIANCE VALUE
+    day = int(datetime.today().strftime('%d')) + 1
+    print(day)
+    # GET CURRENT HOUR - ALLIANCE VALUE
     now = datetime.now().strftime('%H')
+    print("Hour:")
+    print(now)
+    # COLLUMNS - ALLIANCE VALUE
+    midday_col = 2
+    midnight_col = 3
+# ALLIANCE VALUE CALLS END -------
+
+    # GET DATA
     response = requests.post(url)
     response.raise_for_status()
     results = response.json()
 
     if now == '12':
         worksheet.update_cell(day, midday_col, str(results['alliance'][0]['value']))
+        print("Alliance Value done")
         print("12 edit")
-        #--
-        all_worksheet = sheet.worksheet("MemberStats")
-        n = 0
-        cell = day + 61
-        for member in results['members']:
-            name = results['members'][n]['company']
-            unix_join = int(results['members'][n]['joined'])
-            join = datetime.utcfromtimestamp(unix_join).strftime('%d/%m/%Y')
-            flights = results['members'][n]['flights']
-            cont = results['members'][n]['contributed'] / 1000
-            all_worksheet.update('A' + str(cell) + ':D' + str(cell), [[name, join, flights, cont]])
-            cell = cell + 1
-            n = n + 1
     elif now == '00':
-        worksheet.update_cell(day, midnight_col, str(results['alliance'][0]['value']))
+        day2 = int(datetime.today().strftime('%d'))
+        worksheet.update_cell(day2, midnight_col, str(results['alliance'][0]['value']))
         print("00 edit")
-
+        print("Alliance Value done")
     print("loop restarting")
 slow_count.start()
 
@@ -74,18 +69,6 @@ async def on_message(message):
     price = ''
     if message.author == client.user:
         return
-
-    #if message.content.startswith('!dayval'):
-    #    response = requests.post(url)
-    #    response.raise_for_status()
-    #    results = response.json()
-    #    worksheet.update_cell(day, midday_col, str(results['alliance'][0]['value']))
-
-    #if message.content.startswith('!nightval'):
-    #    response = requests.post(url)
-    #    response.raise_for_status()
-    #    results = response.json()
-    #    worksheet.update_cell(day, midnight_col, str(results['alliance'][0]['value']))
 
     if message.content.startswith('!alliance'):
         response = requests.post(url)
@@ -126,10 +109,10 @@ async def on_message(message):
                     today = int(time.time())
                     cont = member['contributed']
                     join = int(member['joined'])
-                    #unix time things..
+                    # unix time things..
                     unix_diff = today - join
                     diff = round(unix_diff / 86400)
-                    #---
+                    # ---
                     avg = cont / diff
                     airname = airname.replace('!stats ', '')
                     embed = discord.Embed(title=airname + "  |  Alliance Stats", color=0x00ffff)
@@ -151,11 +134,5 @@ async def on_message(message):
         price = price.replace('!c ', '')
         channel = client.get_channel(706963574903275642)
         await channel.send('CO2 <@&706951098132594708> at $' + str(price) + ' !')
-
-    #elif message.content.startswith('!osw'):
-     #   channel = client.get_channel(703342736568352809)
-        #await channel.send("Don't worry, the bot hasn't freaked out! Its just being updated!")
-        #+ "\n" + 'Tag <@&703342736568352809>  !')
-      #  await channel.send(embed=embed)
 
 client.run(token)
