@@ -1,5 +1,7 @@
 import discord
 from discord.ext import tasks, commands
+import urllib
+import urllib.parse
 from datetime import datetime
 import time
 import calendar
@@ -80,24 +82,8 @@ async def on_message(message):
         embed.set_footer(text="By: TOYOTA - AIR")
         await message.channel.send(embed=embed)
 
-    elif message.content.startswith('!pstats' + airname):
-        airname = message.content
-        airname = airname.replace('!pstats ', '')
-        try:
-            response = requests.post(user_url + '&user=' + airname)
-            response.raise_for_status()
-            results = response.json()
-            embed = discord.Embed(title= airname + "  |  Stats", color=0x00ffff)
-            embed.add_field(name="Level", value=str(results['user']['level']), inline=False)
-            embed.add_field(name="Share Value", value='$' + str(results['user']['share']), inline=False)
-            embed.add_field(name="Fleet", value=str(results['user']['fleet']), inline=False)
-            embed.add_field(name="Routes", value=str(results['user']['routes']), inline=False)
-            embed.set_footer(text="By: TOYOTA - AIR")
-            await message.channel.send(embed=embed)
-        except:
-            await message.channel.send("Airline not found!")
-
     elif message.content.startswith('!stats' + airname):
+        #Alliance
         airname = message.content
         airname = airname.replace('!stats ', '')
         response = requests.post(url)
@@ -106,6 +92,11 @@ async def on_message(message):
         for member in results['members']:
             try:
                 if member['company'] == airname:
+                    #Airline
+                    response = requests.post(user_url + '&user=' + airname)
+                    response.raise_for_status()
+                    results_a = response.json()
+                    #----
                     today = int(time.time())
                     cont = member['contributed']
                     join = int(member['joined'])
@@ -115,10 +106,17 @@ async def on_message(message):
                     # ---
                     avg = cont / diff
                     airname = airname.replace('!stats ', '')
-                    embed = discord.Embed(title=airname + "  |  Alliance Stats", color=0x00ffff)
-                    embed.add_field(name="Flights", value=str(member['flights']), inline=False)
-                    embed.add_field(name="Contribution", value='$' + str(cont / 1000), inline=False)
-                    embed.add_field(name="Average Contribution p/day", value='$' + str(round(avg, 3)), inline=False)
+                    embed = discord.Embed(title=airname + "  |  Stats", color=0x00ffff)
+                    embed.add_field(name="Flights", value=str(member['flights']), inline=True)
+                    embed.add_field(name="Contribution", value='$' + str(cont / 1000), inline=True)
+                    embed.add_field(name="Average Contribution p/day", value='$' + str(round(avg, 3)), inline=True)
+                    embed.add_field(name="Mode", value=str(results_a['user']['game_mode']), inline=True)
+                    embed.add_field(name="Rank", value=str(results_a['user']['rank']), inline=True)
+                    embed.add_field(name="Share Value", value='$' + str(results_a['user']['share']), inline=True)
+                    embed.add_field(name="Level", value=str(results_a['user']['level']), inline=True)
+                    embed.add_field(name="Fleet", value=str(results_a['user']['fleet']), inline=True)
+                    embed.add_field(name="Routes", value=str(results_a['user']['routes']), inline=True)
+                    embed.set_thumbnail(url=results_a['user']['logo'])
                     embed.set_footer(text="By: TOYOTA - AIR")
                     await message.channel.send(embed=embed)
             except:
@@ -134,5 +132,38 @@ async def on_message(message):
         price = price.replace('!c ', '')
         channel = client.get_channel(706963574903275642)
         await channel.send('CO2 <@&706951098132594708> at $' + str(price) + ' !')
+
+    #ADMIN COMMANDS ------------------------------------
+    elif message.content.startswith('!dailyc'):
+        response = requests.post(url)
+        response.raise_for_status()
+        results = response.json()
+        role = 701902159159099439
+        if role in [y.id for y in message.author.roles]:
+            n = 0
+            dailyc = "ONE STAR WORLD | DAILY CONTRIBUTION \n\n"
+            for member in results['members']:
+                today = int(time.time())
+                comp = str(results['members'][n]['company'])
+                cont = int(results['members'][n]['contributed'])
+                join = int(results['members'][n]['joined'])
+                # unix time things..
+                unix_diff = today - join
+                diff = round(unix_diff / 86400)
+                if diff == 0:
+                    break
+                # ---
+                avg = cont / diff
+                dailyc = dailyc + "Member: " + comp + "\n" + "Contribution p/day: $" + str(round(avg, 3)) + "\n\n"
+                n = n + 1
+            pb_v = {'api_dev_key':str(pbk), 'api_option':'paste', 'api_paste_expire_date':'1H', 'api_paste_name':'ONE STAR WORLD | Daily Constribution','api_paste_code':str(dailyc)}
+            data = urllib.parse.urlencode(pb_v).encode("utf-8")
+            req = urllib.request.Request('http://pastebin.com/api/api_post.php')
+            with urllib.request.urlopen(req, data=data) as f:
+                resp = f.read()
+                resp = resp.decode('utf-8')
+                await message.channel.send(resp)
+        else:
+            await message.channel.send(":x: You're not a Manager, you can't use this command.")
 
 client.run(token)
