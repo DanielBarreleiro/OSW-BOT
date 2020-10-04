@@ -2,20 +2,26 @@
 This project is a Discord bot for One Star World | AM4 Alliance  
 
 ## ⚙ Commands
-!alliance - Returns alliance Value & Rank  
+$a [Alliance_name_here] - Returns alliance Value, Rank and Members  
 
-!stats [Airline_name_here]  
-  - Returns Airline Stats:  
-  - Mode;  
-  - Rank;  
+$s [Airline_name_here]  
+- Shows Alliance Stats:
+  - Alliance Rank;
+  - Alliance Members;
+  - Alliance Value;
+  - Flights;
+  - Contribution;
+  - Average contribution p/day; 
+  
+- Returns Airline Stats:  
+  - Rank;    
+  - Mode;   
+  - Fleet / Routes; 
   - Level;  
   - Share Value;  
-  - Fleet;  
-  - Routes; 
-  - Flights;  
-  - Contribution;  
-  - Average contribution p/day;  
+  - Share Market;
   - Airline Logo;  
+  - SV History;
   
-!f [price] & !c [price]  
-- Tags members with the @Price role (!f for Fuel & !c for CO2)
+$f [price] & $c [price]  
+- Tags members with the @Price role ($f for Fuel & $c for CO2)
