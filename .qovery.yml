@@ -1,0 +1,11 @@
+---
+application:
+  name: "osw-bot"
+  project: "1004"
+  organization: "QoveryCommunity"
+routers:
+- name: "main-osw-bot"
+  routes:
+  - application_name: "osw-bot"
+    paths:
+    - "/*"
